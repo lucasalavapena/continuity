@@ -8,6 +8,7 @@ import logging
 import sys
 import time
 from datetime import datetime, timezone
+from os import environ
 import praw
 import prawcore.exceptions
 import regex
@@ -15,6 +16,7 @@ import yaml
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrulestr
+
 
 # setup
 logging.basicConfig(
@@ -40,13 +42,18 @@ parser.add_argument('--seconds', type=int, default=3540,
                     help='''submit posts scheduled within the last SECONDS seconds (default: 3540),
                     do not change this unless you are trying to change away from hourly cron jobs
                     and you know what you are doing''')
-parser.add_argument('configuration', type=str, help='PRAW configuration section')
 parser.add_argument('wiki', type=str, help='name of wiki page to use')
 parser.add_argument('subreddit', action='store', type=str, nargs='+', help='name of subreddit')
 args = parser.parse_args()
 
 # reddit
-r = praw.Reddit(args.configuration)
+r = praw.Reddit(
+    client_id=environ['REDDIT_CLIENT_ID'],
+    client_secret=environ['REDDIT_CLIENT_SECRET'],
+    password=environ['REDDIT_PASSWORD'],
+    user_agent=environ['REDDIT_USER_AGENT'],
+    username=environ['REDDIT_USERNAME'],
+)
 r.validate_on_submit = True
 
 
