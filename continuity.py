@@ -19,12 +19,16 @@ from dateutil.rrule import rrulestr
 
 
 # setup
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
-    datefmt='%Y-%m-%dT%H:%M:%S',
-)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+ch = logging.FileHandler("test.log")
+
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(funcName)s | %(message)s', datefmt='%Y-%m-%dT%H:%M:%S')
+ch.setFormatter(formatter)
+
+
+logger.addHandler(ch)
 # arguments
 parser = argparse.ArgumentParser(
     description='''This is a replacement for the AutoModerator schedule. This is
@@ -79,19 +83,19 @@ def read_schedule(subreddit):
                 return posts
 
             # no posts and no exceptions?
-            logging.error(f"empty schedule for /r/{subreddit}")
+            logger.error(f"empty schedule for /r/{subreddit}")
             break
         # unrecoverable exception
         except (prawcore.exceptions.Forbidden, prawcore.exceptions.NotFound) as error:
-            logging.error(f"unable to read schedule on /r/{subreddit}: {error}")
+            logger.error(f"unable to read schedule on /r/{subreddit}: {error}")
             break
         # possibly recoverable exception
         except Exception as error:
-            logging.error(f"exception reading schedule on /r/{subreddit}: {error}")
+            logger.error(f"exception reading schedule on /r/{subreddit}: {error}")
 
         # always sleep after failures
         delay = (attempt + 1) * 30
-        logging.info(f"sleeping {delay} seconds")
+        logger.info(f"sleeping {delay} seconds")
         time.sleep(delay)
 
     # only reached on failure
@@ -143,7 +147,7 @@ def process_section(subreddit, section):
             elif regex.search(r'^(2|true)$', str(section.get("sticky"))):
                 post["sticky"] = 2
     except Exception as error:
-        logging.error(f"exception reading {section} on /r/{subreddit}: {error}")
+        logger.error(f"exception reading {section} on /r/{subreddit}: {error}")
         return None
 
     return post
@@ -196,7 +200,7 @@ def consider_posts(posts, now):
                 else:
                     break
         except Exception as error:
-            logging.error(f"exception considering {post}: {error}")
+            logger.error(f"exception considering {post}: {error}")
 
     return queue
 
@@ -237,7 +241,7 @@ def submit_queue(queue):
         if not queue:
             return
         if len(queue) > args.limit:
-            logging.error(f"submission queue is {len(queue)} entries long, something may be wrong")
+            logger.error(f"submission queue is {len(queue)} entries long, something may be wrong")
             subreddits = set()
             for post in queue:
                 if post.get("subreddit"):
@@ -247,7 +251,7 @@ def submit_queue(queue):
                                   "Attempted to make {len(queue)} posts at once. Please investigate.")
             sys.exit(1)
     except Exception as error:
-        logging.error(f"exception checking post limit {queue}: {error}")
+        logger.error(f"exception checking post limit {queue}: {error}")
         sys.exit(1)
 
     try:
@@ -255,7 +259,7 @@ def submit_queue(queue):
             submit_post(post)
 
     except Exception as error:
-        logging.error(f"exception posting queue {queue}: {error}")
+        logger.error(f"exception posting queue {queue}: {error}")
         sys.exit(1)
 
 
@@ -289,9 +293,9 @@ def submit_post(post):
     for attempt in range(5):
         try:
             if args.brief:
-                logging.info(f"{post['when']}: {post['title']}")
+                logger.info(f"{post['when']}: {post['title']}")
             else:
-                logging.info(f"posting {post}")
+                logger.info(f"posting {post}")
 
             # dry-run mode
             if args.dry_run:
@@ -302,7 +306,7 @@ def submit_post(post):
                 if not submission:
                     submission = recently_exists(post["subreddit"], post["title"])
                 if submission:
-                    logging.info(f"already submitted {submission.permalink}")
+                    logger.info(f"already submitted {submission.permalink}")
 
             # do stuff
             if not submission:
@@ -332,13 +336,13 @@ def submit_post(post):
                 return
 
             # no submission and no exceptions?
-            logging.error(f"unknown error making post {post}")
+            logger.error(f"unknown error making post {post}")
         except Exception as error:
-            logging.error(f"exception making post {post}: {error}")
+            logger.error(f"exception making post {post}: {error}")
 
         # always sleep after failures
         delay = (attempt + 1) * 30
-        logging.info(f"sleeping {delay} seconds")
+        logger.info(f"sleeping {delay} seconds")
         time.sleep(delay)
 
     # only reached on failure
@@ -362,10 +366,10 @@ def run():
     # test mode
     if args.start or args.end or args.sandbox or args.dry_run:
         if args.sandbox == args.dry_run:
-            logging.error("set either --sandbox SANDBOX or --dry-run when testing")
+            logger.error("set either --sandbox SANDBOX or --dry-run when testing")
             sys.exit(1)
         if not args.start or not args.end:
-            logging.error("set both --start START and --end END when testing")
+            logger.error("set both --start START and --end END when testing")
             sys.exit(1)
         start = parse(args.start)
         end = parse(args.end)
@@ -376,7 +380,7 @@ def run():
                 submit_queue(queue)
                 now += relativedelta(hours=1)
         else:
-            logging.error(f"invalid timestamps (start={start}, end={end})")
+            logger.error(f"invalid timestamps (start={start}, end={end})")
             sys.exit(1)
         sys.exit(0)
 
@@ -391,8 +395,8 @@ if __name__ == "__main__":
     try:
         run()
     except KeyboardInterrupt:
-        logging.error("received SIGINT from keyboard, stopping")
+        logger.error("received SIGINT from keyboard, stopping")
         sys.exit(1)
     except Exception as error:
-        logging.error(f"site error: {error}")
+        logger.error(f"site error: {error}")
         sys.exit(1)
