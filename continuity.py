@@ -40,9 +40,9 @@ parser.add_argument('--end', type=str, help='start timestamp for tests')
 parser.add_argument('--sandbox', type=str, help='redirect posts to /r/SANDBOX')
 parser.add_argument('--dry-run', action='store_true', help='do not post, only show potential posts')
 parser.add_argument('--brief', action='store_true', help='brief output format for dry runs')
-parser.add_argument('--limit', type=int, default=2,
+parser.add_argument('--limit', type=int, default=12,
                     help='post limit per subreddit per run (default: 2)')
-parser.add_argument('--seconds', type=int, default=3540,
+parser.add_argument('--seconds', type=int, default=3605,
                     help='''submit posts scheduled within the last SECONDS seconds (default: 3540),
                     do not change this unless you are trying to change away from hourly cron jobs
                     and you know what you are doing''')
