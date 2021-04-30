@@ -42,7 +42,7 @@ parser.add_argument('--dry-run', action='store_true', help='do not post, only sh
 parser.add_argument('--brief', action='store_true', help='brief output format for dry runs')
 parser.add_argument('--limit', type=int, default=12,
                     help='post limit per subreddit per run (default: 2)')
-parser.add_argument('--seconds', type=int, default=3605,
+parser.add_argument('--seconds', type=int, default=3999,
                     help='''submit posts scheduled within the last SECONDS seconds (default: 3540),
                     do not change this unless you are trying to change away from hourly cron jobs
                     and you know what you are doing''')
@@ -162,7 +162,6 @@ def consider_posts(posts, now):
     :return: queue of posts to be made
     '''
     queue = []
-
     for post in posts:
         try:
             rrule = None
@@ -270,7 +269,7 @@ def recently_exists(subreddit, title):
     :param title: title of a reddit post
     :return: reddit post or False
     '''
-    for recent in r.user.me().submissions.new(limit=100):
+    for recent in r.user.me().submissions.new(limit=1000):
         if recent.created_utc < time.time() - args.seconds:
             continue
         if recent.subreddit == subreddit and recent.title == title:
@@ -310,7 +309,9 @@ def submit_post(post):
 
             # do stuff
             if not submission:
-                submission = post["subreddit"].submit(post["title"], selftext=post["text"])
+                submission = post["subreddit"].submit(post["title"], selftext=post["text"],
+                                                      flair_id="03edaa94-a9ed-11eb-bf4c-0e409df0ddc5",
+                                                      flair_text="May 2021 Exams")
             if post.get("distinguish") and not distinguish:
                 submission.mod.distinguish()
                 distinguish = True
